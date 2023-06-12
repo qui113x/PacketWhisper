@@ -1,7 +1,9 @@
 # PacketWhisper
-PacketWhisper - Stealthily Transfer Data & Defeat Attribution Using DNS Queries & Text-Based Steganography, without the need for attacker-controlled Name Servers or domains; Evade DLP/MLS Devices; Defeat Data- & DNS Name Server Whitelisting Controls. Convert any file type (e.g. executables, Office, Zip, images) into a list of Fully Qualified Domain Names (FQDNs), use DNS queries to transfer data. Simple yet extremely effective.
+PacketWhisper - Stealthily Transfer Data & Defeat Attribution Using DNS Queries & Text-Based Steganography without the need for attacker-controlled Name Servers or domains; Evade DLP/MLS Devices; Defeat Data- & DNS Name Server Whitelisting Controls. Convert any file type (e.g. executables, Office, Zip, images) into a list of Fully Qualified Domain Names (FQDNs), use DNS queries to transfer data. Simple yet extremely effective.
 
-(Update 05/27/2020: Yes, I'll be migrating all of my Github projects to Python3 over the summer of 2020.)
+
+(EDIT: qui113x has migrated this tool over to python3 (tested on Python 3.11.3))
+
 
 # Author
 Joe Gervais (TryCatchHCF)
@@ -20,7 +22,7 @@ To receive the data, you capture the network traffic containing the DNS queries,
 
 DNS is an attractive protocol to use because, even though it's a relatively slow means of transferring data, DNS is almost always allowed across network boundaries, even on the most sensitive networks.
 
-<b>Important note:</b> We're using DNS queries to transfer the data, not successful DNS lookups. PacketWhisper never needs to successfully resolve any of its DNS queries. In fact PacketWhisper doesn't even look at the DNS responses. This expands our use cases, and underscores the fact that we never need to control a domain we're querying for, never need to control a DNS Name Server handling DNS requests.
+<b>Important note:</b> We're using DNS queries to transfer the data, NOT successful DNS lookups. PacketWhisper never needs to successfully resolve any of its DNS queries. In fact PacketWhisper doesn't even look at the DNS responses. This expands our use cases, and underscores the fact that we never need to control a domain we're querying for, never need to control a DNS Name Server handling DNS requests.
 
 So using PacketWhisper, we transform a payload that looks like this:
 
@@ -46,8 +48,8 @@ I've included a sample PCAP file in the project (cleverly named "sample.pcap") t
 As a quick test in your own environment, run PacketWhisper from a VM, then send a file while doing a packet capture on the VM's network interface via the host system. You can then load the PCAP file into whichever PacketWhisper instance is convenient to decode the file. Just remember it's not a speedy transfer. Smaller files and patience are your friend.
 
 # Requires
-1) Python 2.7.x (3.6.x port is underway)<br>
-2) For decoding payloads: tcpdump (included on Linux & MacOS) or <a href="https://www.winpcap.org">WinDump</a> (Windows)
+1) Python 3.11.x (2.7.x is available at TryHackHCF's github)<br>
+2) For decoding payloads: tcpdump (included on Linux & MacOS) or <a href="https://www.winpcap.org">WinDump</a> (Windows. Note: Must also install Winpcap. These files are deprecated and vulnerable!! (Remove after use!!))
 
 <b>Question:</b> "Why didn't you use Scapy or dnspython toolset?"
 
@@ -71,7 +73,7 @@ FQDN-based ciphers consist of 3 categories:
 
 RECOMMENDED CIPHER MODE FOR MOST USE CASES
 	
-These are FQDNs with randomized elements built into the subdomains. This helps prevent DNS caching, while also allowing us to transfer data beyond a NAT'd network devices that may be along the DNS query path. Since the sending system's IP address isn't available beyond the NAT device, the cipher-generated subdomains contain unique tag elements to help us identify PacketWhisper payloads in the packet capture. 
+These are FQDNs with randomized elements built into the subdomains. This helps prevent DNS caching, while also allowing us to transfer data beyond any NAT'd network devices that may be along the DNS query path. Since the sending system's IP address isn't available beyond the NAT device, the cipher-generated subdomains contain unique tag elements to help us identify PacketWhisper payloads in the packet capture. 
 
 These ciphers mimic the formats of various services that rely on complex subdomains as a means to identify a session, user, cached content etc. This approach helps PacketWhisper's DNS queries blend in with the rest of the network's traffic.
 
@@ -91,7 +93,7 @@ These are FQDNs constructed out of common Website URLs.
 
 NOTE: Since most environments are NAT'd at the perimeter (removing visibility of client's IP address), this mode is generally only useful for transferring data between systems connected to the same local /24 network (for example, the guest wifi at your favorite coffee shop).
 
-Since Common Website ciphers only have the source IP address as a way to distinguish its queries from all the other similar DNS queries on the network, PacketWhisper will transmit a unique "knock sequence" DNS query at beginning and end of the payload, which helps us pick out the transmitting host from the pcap file later.
+Since Common Website ciphers only have the source IP address as a way to distinguish its queries from all the other similar DNS queries on the network, PacketWhisper will transmit a unique "knock sequence" DNS query at the beginning and end of the payload. This helps us pick out the transmitting host from the pcap file later.
 
 Example FQDN:  www.github.com
 
@@ -117,7 +119,7 @@ Use your imagination. Any device along the DNS resolution path is an option, inc
 <b>NOTE: VPN connections block visibility between host and VPN exit node.</b> If the client you're transferring from has an active VPN connection, you won't be able to see any DNS queries unless you can capture upstream from the VPN exit node. Even capturing on the same system will fail. Since many of you are probably using VPNs, if you want to test out PacketWhisper, try transmitting from a hosted virtual machine (VM) and capture the traffic on the VM's network interface on the host system.
 
 # Extracting The Payload
-Once you've captured the pcap file, recover the payload by running PacketWhisper on a system that has tcpdump (included on Linux & MacOS) or <a href="https://www.winpcap.org">WinDump</a> (Windows) installed. PacketWhisper will ask you which cipher was used, then extract the payload from the pcap, and finally decode the extracted payload with the matching cipher.
+Once you've captured the pcap file, recover the payload by running PacketWhisper on a system that has tcpdump (included on Linux & MacOS) or <a href="https://www.winpcap.org">WinDump</a> installed. (Windows. Note: Must also install Winpcap. These files are deprecated and vulnerable!! (Remove after use!!)). PacketWhisper will ask you which cipher was used, then extract the payload from the pcap, and finally decode the extracted payload with the matching cipher.
 
 <b>Important note:</b> Within the same PCAP, you can transmit one payload per cipher used. A PCAP containing more than one payload using the same cipher will cause problems. For example my supplied 'example.pcap' file contains 5 payloads, one for each of the operational ciphers currently available. If one of the payloads had used the same cipher as another one, PacketWhisper will fail to extract either of them. The easy fix is to break up the PCAP file (this is why the PacketWhisper transmit code prints out the UTC date-time when starting and ending transmission). I'm working on allowing multiple payloads using the same cipher, solution is already in place, I just need to get around to it. 
 
